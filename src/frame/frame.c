@@ -90,6 +90,8 @@ extern void frame_list_create(void)
     g_signal_connect(win, "key-press-event", G_CALLBACK(window_event_handle), NULL);
     g_signal_connect(win, "window-state-event", G_CALLBACK(window_event_handle), NULL);
 
+    gtk_window_maximize(GTK_WINDOW(win));
+
     view_list_create();
 
     for (int i = 0; i < 10; i++) {
@@ -202,7 +204,7 @@ static void view_list_create(void)
         "javascript-can-open-windows-automatically", config[conf_js_auto_popups].i,
         "default-font-family", config[conf_font_family].s,
         "default-font-size", config[conf_font_size].i,
-        "default-charset", config[conf_charset].i,
+        "default-charset", config[conf_charset].s,
         "enable-developer-extras", config[conf_developer_extras].i,
         "enable-dns-prefetching", config[conf_dns_prefetching].i,
         "enable-caret-browsing", config[conf_caret_browsing].i,
