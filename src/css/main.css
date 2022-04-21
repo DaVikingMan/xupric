@@ -19,7 +19,7 @@ label {
 	font-family: "JetBrainsMono Nerd Font", sans-serif;
 }
 
-#bar_uri_entry, #bar_uri_entry_secondary {
+#bar_uri_entry, #bar_uri_entry_secondary, entry {
 	background-color: @uri;
 	box-shadow: 0 0 1px @uri_hover;
 	border: 0px;
@@ -29,6 +29,10 @@ label {
 	font-family: "JetBrainsMono Nerd Font", sans-serif;
 	font-weight: bold;
 	caret-color: @text;
+}
+
+undershoot, overshoot {
+	background-color: rgba(0, 0, 0, 0);
 }
 
 #menu_download_label {

@@ -10,17 +10,15 @@ struct frame {
 	WebKitWebView *view;
 	WebKitFindController *finder;
 	Window winid;
-	char *uri;
-	int empty, fullscreen;
+	int empty, fullscreen, dark_mode;
 	float zoom;
 };
 
-extern void frame_list_create(void);
-extern void view_order_show(int increment);
-extern void view_show(int id);
-extern struct frame **frames_get(void);
-extern struct frame *current_frame_get(void);
-extern GtkBuilder *builder_get(void);
-extern void frame_cleanup(void);
+void frame_list_create(void);
+void bookmark_button_toggle_handle(GtkWidget *);
+void dark_mode_button_toggle_handle(GtkWidget *);
+struct frame *frames_get(void);
+struct frame *current_frame_get(void);
+GtkBuilder *builder_get(void);
 
 #endif /* _FRAME_FRAME_H */
