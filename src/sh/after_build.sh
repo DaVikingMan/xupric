@@ -1,7 +1,7 @@
 #!/bin/sh
 # Note : These files are only to be ran inside the current folder, if it's ran outside it, it wouldn't work
 
-mkdir -p ~/.config/xupric/styles/
+mkdir -p ~/.config/xupric/styles/app/
 
 cd ../
 cp -n xupric.conf ~/.config/xupric/
