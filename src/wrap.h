@@ -7,6 +7,7 @@ union arg {
 	int i;
 	float f;
 	const void *p;
+	char *s;
 };
 
 static inline void wrap_view_show(union arg *arg)
@@ -34,6 +35,7 @@ static inline void wrap_uri_stop(union arg *)
 	uri_stop(current_frame_get());
 	webkit_find_controller_search_finish(
 		webkit_web_view_get_find_controller(current_frame_get()->view));
+	fullscreen_action(current_frame_get(), 0);
 }
 
 static inline void wrap_fullscreen_toggle(union arg *)
@@ -91,4 +93,34 @@ static inline void wrap_debug_toggle(union arg *)
 static inline void wrap_download_page(union arg *)
 {
 	download_current_page();
+}
+
+static inline void wrap_focus_entry(union arg *)
+{
+	clear_focus_entry();
+}
+
+static inline void wrap_focus_secondary_entry(union arg *)
+{
+	clear_focus_secondary_entry();
+}
+
+static inline void wrap_uri_load(union arg *arg)
+{
+	uri_custom_load(current_frame_get(), arg->s, 0);
+}
+
+static inline void wrap_workspace_load(union arg *arg)
+{
+	workspace_load(arg->i);
+}
+
+static inline void wrap_new_window_spawn(union arg *)
+{
+	new_window_spawn(NULL);
+}
+
+static inline void wrap_toggle_webinspector(union arg *)
+{
+	toggle_webinspector();
 }

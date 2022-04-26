@@ -57,8 +57,12 @@ NB! Gtk4 and webkit2gtk-5.0 __aren't__ supported.
 | ctrl+d         | dark mode toggle |
 | ctrl+shift+d   | debug toggle     |
 | ctrl+s         | download page    |
-| Esc            | stop loading & finish find|
+| alt+s          | uri entry focus  |
+| alt+shift+s    | uri secondary entry focus|
+| alt+w          | open new window  |
+| Esc            | stop (uri,find,fullscreen)|
 | F11            | fullscreen toggle|
+| alt+f          | fullscreen toggle|
 | alt+h          | goto home/start  |
 | alt+Left       | go backwards     |
 | alt+Right      | go forwards      |
@@ -67,7 +71,21 @@ NB! Gtk4 and webkit2gtk-5.0 __aren't__ supported.
 | ctrl+0         | zoom reset       |
 | ctrl+Tab       | next tab         |
 | ctrl+shift_Tab | previous tab     |
-| alt+\<x\>      | switch to tab x  |
+| alt+(1-0)      | switch to tab (1-0)|
+| ctrl+i         | toggle webinspector|
+| C+S+A+a        | load amazon.com   |
+| C+S+A+d        | load discord.com  |
+| C+S+A+e        | load ebay.com     |
+| C+S+A+g        | load github.com   |
+| C+S+A+i        | load twitter.com  |
+| C+S+A+m        | load mail.zoho.com|
+| C+S+A+n        | load netflix.com  |
+| C+S+A+o        | load odysee.com   |
+| C+S+A+r        | load reddit.com   |
+| C+S+A+t        | load trello.com   |
+| C+S+A+w        | load wikipedia.org|
+| C+S+A+y        | load youtube.com  |
+| C+S+A+(1-5)    | switch to workspace (1-5)|
 
 Tab (10 max) switching is done with alt+(tab_number from 1->0)
 

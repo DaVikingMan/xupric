@@ -52,8 +52,12 @@ void frame_list_create(void)
 		frames[i].view = views_get()[i];
 		frames[i].win = win;
 		frames[i].empty = 1;
+		frames[i].fullscreen = 0;
+		frames[i].onuri = NULL;
+		frames[i].ht = NULL;
 		frames[i].dark_mode = cfg_get()[conf_dark_mode].i;
 		frames[i].zoom = 1.0;
+		frames[i].inspector = 0;
 		frames[i].finder = webkit_web_view_get_find_controller(frames[i].view);
 	}
 
@@ -68,6 +72,8 @@ static void frame_signals_connect(void)
 	g_signal_connect(gtk_builder_get_object(builder, "bar_uri_entry_secondary"),
 		"activate", G_CALLBACK(bar_uri_enter_handle),
 		gtk_builder_get_object(builder, "uri_buffer_secondary"));
+	g_signal_connect(gtk_builder_get_object(builder, "bar_fire_button"), "clicked",
+		G_CALLBACK(gwrap_fire_button_handle), NULL);
 	g_signal_connect(gtk_builder_get_object(builder, "bar_bookmark_button"), "clicked",
 		G_CALLBACK(bookmark_button_toggle_handle), NULL);
 	g_signal_connect(gtk_builder_get_object(builder, "bar_dark_mode_button"), "clicked",
@@ -104,6 +110,8 @@ static void frame_signals_connect(void)
 		G_CALLBACK(gwrap_history_remove_all), NULL);
 	g_signal_connect(gtk_builder_get_object(builder, "menu_cookies_button"), "clicked",
 		G_CALLBACK(win_cookie_build), NULL);
+	g_signal_connect(gtk_builder_get_object(builder, "cookies_filter_button"), "clicked",
+		G_CALLBACK(gwrap_cookie_remove_with_filter), NULL);
 	g_signal_connect(gtk_builder_get_object(builder, "cookies_all_button"), "clicked",
 		G_CALLBACK(gwrap_cookie_remove_all), NULL);
 }
@@ -126,9 +134,11 @@ static void bar_uri_enter_handle(GtkWidget *b)
 
 static int window_event_handle(GtkWidget *, GdkEvent *ev)
 {
+	int i;
+
 	switch (ev->type) {
 	case GDK_KEY_PRESS:
-		for (int i = 0; i < (int)LENGTH(keys); i++) {
+		for (i = 0; i < (int)LENGTH(keys); i++) {
 			if (gdk_keyval_to_lower(ev->key.keyval) == keys[i].keyval &&
 				CLEANMASK(ev->key.state) == keys[i].mod &&
 				keys[i].func) {
@@ -206,4 +216,10 @@ struct frame *current_frame_get(void)
 GtkBuilder *builder_get(void)
 {
 	return builder;
+}
+
+void frame_cleanup(void)
+{
+	g_object_unref(G_OBJECT(builder));
+	efree(frames);
 }

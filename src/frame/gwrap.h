@@ -58,6 +58,7 @@ static inline void gwrap_history_remove_all(GtkWidget *)
 	history_remove_all();
 }
 
+
 static inline void gwrap_cookie_remove(GtkWidget *w, struct cookie *c)
 {
 	GtkWidget *box;
@@ -68,9 +69,20 @@ static inline void gwrap_cookie_remove(GtkWidget *w, struct cookie *c)
 	gtk_widget_destroy(box);
 }
 
+static inline void gwrap_cookie_remove_with_filter(GtkWidget *)
+{
+	cookie_remove_with_filter();
+}
+
 static inline void gwrap_cookie_remove_all(GtkWidget *)
 {
 	cookie_remove_all();
+}
+
+static inline void gwrap_fire_button_handle(GtkWidget *)
+{
+	cookie_remove_with_filter();
+	history_remove_all();
 }
 
 #endif /* _FRAME_GWRAP_H */
