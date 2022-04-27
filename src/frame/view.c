@@ -17,6 +17,15 @@
 
 #define CLEANMASK(mask) (mask & (GDK_CONTROL_MASK|GDK_SHIFT_MASK|GDK_SUPER_MASK|GDK_MOD1_MASK))
 
+static void resource_load_started(WebKitWebView *, WebKitWebResource *res,
+	WebKitURIRequest *);
+static void resource_load_failed(WebKitWebResource *, GError *err);
+static void resource_load_tls_failed(WebKitWebResource *, GTlsCertificate *,
+	GTlsCertificateFlags flags);
+static void resource_finished(WebKitWebResource *);
+static void resource_received_data(WebKitWebResource *res, guint64);
+static int context_menu(WebKitWebView *, WebKitContextMenu *,
+	GdkEvent *, WebKitHitTestResult *);
 static int inspector_event(WebKitWebInspector *, int type);
 static int scroll_event(GtkWidget *, GdkEvent *ev);
 static int button_release_event(GtkWidget *, GdkEvent *ev);
@@ -187,9 +196,10 @@ void view_list_create(void)
 
 	for (i = 0; i < style_names_len; i++) {
 		file = g_strdup_printf("%s%s", config_names[2], style_names[i]);
-		if (!g_file_get_contents(file, &content, NULL, NULL))
-			die(1, "[ERROR] Unable to read style file: %s\n", file);
-
+		if (!g_file_get_contents(file, &content, NULL, NULL)) {
+			debug(D_WARN, "view", "failed to read custom style file: %s", file);
+			continue;
+		}
 		const gchar *allow[] = { g_strdup_printf("https://%s/*", style_names[i]), NULL };
 		css[i] = webkit_user_style_sheet_new(content,
 			WEBKIT_USER_CONTENT_INJECT_ALL_FRAMES,
@@ -203,9 +213,10 @@ void view_list_create(void)
 
 	for (i = 0; i < script_names_len; i++) {
 		file = g_strdup_printf("%s%s", config_names[1], script_names[i]);
-		if (!g_file_get_contents(file, &content, NULL, NULL))
-			die(1, "[ERROR] Unable to read script file: %s\n", file);
-
+		if (!g_file_get_contents(file, &content, NULL, NULL)) {
+			debug(D_WARN, "view", "failed to read custom script file: %s", file);
+			continue;
+		}
 		const gchar *allow[] = { g_strdup_printf("https://%s/*", script_names[i]), NULL };
 		script[i] = webkit_user_script_new(content,
 			WEBKIT_USER_CONTENT_INJECT_ALL_FRAMES,
@@ -221,8 +232,10 @@ void view_list_create(void)
 		file = g_strdup_printf("%s%s", config_names[3], cert_names[i]);
 		cert = g_tls_certificate_new_from_file(file, NULL);
 
-		if (g_tls_certificate_verify(cert, NULL, NULL) & G_TLS_CERTIFICATE_VALIDATE_ALL)
-			die(1, "[ERROR] Certificate validation failed\n");
+		if (g_tls_certificate_verify(cert, NULL, NULL) & G_TLS_CERTIFICATE_VALIDATE_ALL) {
+			debug(D_WARN, "view", "certificate validation failed: %s", file);
+			continue;
+		}
 
 		webkit_web_context_allow_tls_certificate_for_host(context, cert, config_names[3]);
 
@@ -268,6 +281,8 @@ void view_list_create(void)
 			G_CALLBACK(permission_request), current_frame_get()->win);
 		g_signal_connect(G_OBJECT(views[i]), "load-changed",
 			G_CALLBACK(uri_changed), NULL);
+		g_signal_connect(G_OBJECT(views[i]), "resource-load-started",
+			G_CALLBACK(resource_load_started), NULL);
 		g_signal_connect(G_OBJECT(views[i]), "notify::estimated-load-progress",
 			G_CALLBACK(uri_load_progress), NULL);
 		g_signal_connect(G_OBJECT(views[i]), "create",
@@ -286,6 +301,8 @@ void view_list_create(void)
 			G_CALLBACK(button_release_event), NULL);
 		g_signal_connect(G_OBJECT(views[i]), "scroll-event",
 			G_CALLBACK(scroll_event), NULL);
+		g_signal_connect(G_OBJECT(views[i]), "context-menu",
+			G_CALLBACK(context_menu), NULL);
 
 		inspector = webkit_web_view_get_inspector(views[i]);
 		g_signal_connect(G_OBJECT(inspector), "bring-to-front",
@@ -302,9 +319,56 @@ void view_list_create(void)
 	efree(script);
 }
 
+static void resource_load_started(WebKitWebView *, WebKitWebResource *res,
+	WebKitURIRequest *)
+{
+	debug(D_DEBUG, "WebKitWebView", "signal :resource-load-started:");
+
+	g_signal_connect(G_OBJECT(res), "failed", G_CALLBACK(resource_load_failed), NULL);
+	g_signal_connect(G_OBJECT(res), "failed-with-tls-errors",
+		G_CALLBACK(resource_load_tls_failed), NULL);
+	g_signal_connect(G_OBJECT(res), "finished", G_CALLBACK(resource_finished), NULL);
+	g_signal_connect(G_OBJECT(res), "received-data",
+		G_CALLBACK(resource_received_data), NULL);
+}
+
+static void resource_load_failed(WebKitWebResource *, GError *err)
+{
+	debug(D_DEBUG, "WebKitWebResource", "signal :failed:");
+	debug(D_FOLD, "", "%i: %s", err->code, err->message);
+}
+
+static void resource_load_tls_failed(WebKitWebResource *, GTlsCertificate *,
+	GTlsCertificateFlags flags)
+{
+	debug(D_DEBUG, "WebKitWebResource", "signal :failed-with-tls-errors:");
+	debug(D_FOLD, "", "flags: %i", flags);
+}
+
+static void resource_finished(WebKitWebResource *)
+{
+	debug(D_DEBUG, "WebKitWebResource", "signal :finished:");
+}
+
+static void resource_received_data(WebKitWebResource *res, guint64)
+{
+	debug(D_DEBUG, "WebKitWebResource", "signal :received-data:");
+	debug(D_FOLD, "", "%s", webkit_web_resource_get_uri(res));
+}
+
+static int context_menu(WebKitWebView *, WebKitContextMenu *,
+	GdkEvent *, WebKitHitTestResult *)
+{
+	debug(D_DEBUG, "WebKitWebView", "signal :context-menu:");
+
+	return 0;
+}
+
 static int inspector_event(WebKitWebInspector *, int type)
 {
 	struct frame *f;
+
+	debug(D_DEBUG, "WebKitWebView", "inspector %i", type);
 
 	f = current_frame_get();
 	switch (type) {
@@ -326,6 +390,8 @@ static int scroll_event(GtkWidget *, GdkEvent *ev)
 	GdkScrollDirection d;
 	struct frame *f;
 	float x, y;
+
+	debug(D_DEBUG, "WebKitWebView", "signal :scroll-event:");
 
 	if (!gdk_event_get_scroll_deltas(ev, (double *)&x, (double *)&y)) {
 		return 0;
@@ -359,6 +425,8 @@ static int button_release_event(GtkWidget *, GdkEvent *ev)
 	WebKitHitTestResultContext htc;
 	struct frame *f;
 
+	debug(D_DEBUG, "WebKitWebView", "signal :button-release-event:");
+
 	f = current_frame_get();
 	if (f->ht == NULL)
 		return 0;
@@ -380,6 +448,7 @@ static void mouse_target_changed(WebKitWebView *, WebKitHitTestResult *ht, guint
 	WebKitHitTestResultContext htc;
 	struct frame *f;
 
+
 	f = current_frame_get();
 	htc = webkit_hit_test_result_get_context(ht);
 	f->ht = ht;
@@ -392,31 +461,38 @@ static void mouse_target_changed(WebKitWebView *, WebKitHitTestResult *ht, guint
 		f->onuri = (char *)webkit_hit_test_result_get_media_uri(ht);
 	else
 		f->onuri = NULL;
+
+	debug(D_DEBUG, "WebKitWebView", "signal :mouse-target-changed:");
+	debug(D_FOLD, "", "%s", f->onuri);
 }
 
 static void view_crashed(WebKitWebView *, WebKitWebProcessTerminationReason r)
 {
 	switch (r) {
 	case WEBKIT_WEB_PROCESS_CRASHED:
-		die(1, "[ERROR] WebProcess crashed\n");
+		debug(D_ERR, "WebProcess", "crashed");
 		break;
 	case WEBKIT_WEB_PROCESS_EXCEEDED_MEMORY_LIMIT:
-		die(1, "[ERROR] WebProcess exceeded memory limit\n");
+		debug(D_ERR, "WebProcess", "exceeded memory limit");
 		break;
 	default:
-		die(1, "[ERROR] WebProcess termination\n");
+		debug(D_ERR, "WebProcess", "terminated");
 		break;
 	}
 }
 
 static int webkit_fullscreen(WebKitWebView *, int action)
 {
+	debug(D_DEBUG, "WebKitWebView", "fullscreen %i", action);
+
 	fullscreen_action(current_frame_get(), action);
 	return 1;
 }
 
 static void *view_navigation(WebKitWebView *, WebKitNavigationAction *na)
 {
+	debug(D_DEBUG, "WebKitWebView", "signal :create:");
+
 	switch (webkit_navigation_action_get_navigation_type(na)) {
 	case WEBKIT_NAVIGATION_TYPE_OTHER:
 		if (webkit_navigation_action_is_user_gesture(na))
@@ -450,6 +526,7 @@ static void uri_changed(WebKitWebView *)
 	GtkEntry *e;
 	char *uri, *title;
 
+
 	builder = builder_get();
 	e = GTK_ENTRY(gtk_builder_get_object(builder, "bar_uri_entry"));
 	uri = uri_get(current_frame_get());
@@ -457,6 +534,9 @@ static void uri_changed(WebKitWebView *)
 	if (strcmp(gtk_entry_get_text(e), uri)) {
 		gtk_entry_set_text(e, uri);
 	}
+
+	debug(D_DEBUG, "WebKitWebView", "signal :load-changed:");
+	debug(D_FOLD, "", "%s", uri);
 
 	bookmark_image = GTK_IMAGE(gtk_builder_get_object(builder, "bookmark_image"));
 	if (bookmark_exists(uri)) {
@@ -488,6 +568,9 @@ static void uri_load_progress(WebKitWebView *v)
 {
 	GdkCursor *c;
 
+	debug(D_DEBUG, "WebKitWebView", "signal :notify::estimated-load-progress: %f",
+		webkit_web_view_get_estimated_load_progress(v));
+
 	if (webkit_web_view_get_estimated_load_progress(v) != 1.0)
 		c = gdk_cursor_new_for_display(gdk_display_get_default(), GDK_WATCH);
 	else
@@ -501,6 +584,8 @@ static int permission_request(WebKitWebView *, WebKitPermissionRequest *r, GtkWi
 	conf_opt *config;
 	char *type, *question;
 	int ret;
+
+	debug(D_DEBUG, "WebKitWebView", "signal :permission-request:");
 
 	config = cfg_get();
 	if (WEBKIT_IS_DEVICE_INFO_PERMISSION_REQUEST(r)) {
